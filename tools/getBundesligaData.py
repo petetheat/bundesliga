@@ -53,10 +53,10 @@ def tableInit(results):
 '''
 getTable: Get table for each game day for all specified years
 '''
-def getTable(years):
+def getTable(years, division='bl1'):
     
     for year in years:
-        results = getSeason(year)
+        results = getSeason(year, division)
         
         table, teamNames = tableInit(results)
         
@@ -64,23 +64,52 @@ def getTable(years):
             iHome = table.TeamId == game['Team1']['TeamId']
             iAway = table.TeamId == game['Team2']['TeamId']
             
-            if game['MatchResults'][0]['PointsTeam1'] > game['MatchResults'][0]['PointsTeam2']:
-                table.loc[iHome, 'pointsTotal'] += 3
-                table.loc[iHome, 'pointsHome'] += 3
-            elif game['MatchResults'][0]['PointsTeam1'] < game['MatchResults'][0]['PointsTeam2']:
-                table.loc[iAway, 'pointsTotal'] += 3
-                table.loc[iAway, 'pointsAway'] += 3
-            else:
-                table.loc[iHome, 'pointsTotal'] += 1
-                table.loc[iHome, 'pointsHome'] += 1
-                table.loc[iAway, 'pointsTotal'] += 1
-                table.loc[iAway, 'pointsAway'] += 1
+            if game['MatchIsFinished']:
+                if game['MatchResults'][0]['ResultTypeID'] == 2:
+                    gameResults = game['MatchResults'][0]
+                elif game['MatchResults'][1]['ResultTypeID'] == 2:
+                    gameResults = game['MatchResults'][1]
+                else:
+                    print("No end result available")
+                
+                
+                if gameResults['PointsTeam1'] > gameResults['PointsTeam2']:
+                    table.loc[iHome, 'pointsTotal'] += 3
+                    table.loc[iHome, 'pointsHome'] += 3
+                elif gameResults['PointsTeam1'] < gameResults['PointsTeam2']:
+                    table.loc[iAway, 'pointsTotal'] += 3
+                    table.loc[iAway, 'pointsAway'] += 3
+                else:
+                    table.loc[iHome, 'pointsTotal'] += 1
+                    table.loc[iHome, 'pointsHome'] += 1
+                    table.loc[iAway, 'pointsTotal'] += 1
+                    table.loc[iAway, 'pointsAway'] += 1
+                
+                table.loc[iHome, 'goalsTotal'] += gameResults['PointsTeam1']
+                table.loc[iAway, 'goalsTotal'] += gameResults['PointsTeam2']
+                table.loc[iHome, 'goalsConcededTotal'] += gameResults['PointsTeam2']
+                table.loc[iAway, 'goalsConcededTotal'] += gameResults['PointsTeam1']
+                table.loc[iHome, 'goalsHomeTotal'] += gameResults['PointsTeam1']
+                table.loc[iAway, 'goalsAwayTotal'] += gameResults['PointsTeam2']
+                table.loc[iHome, 'goalsConcededHomeTotal'] += gameResults['PointsTeam2']
+                table.loc[iAway, 'goalsConcededAwayTotal'] += gameResults['PointsTeam1']
     
-    table = table.sort_values(by="pointsTotal", ascending=False)
-    # this doesn't work yet
+                
+                table['goalDiff'] = table.goalsTotal - table.goalsConcededTotal
+                table = table.sort_values(by=["pointsTotal", "goalDiff", "goalsTotal"], ascending=[False, False, False])
+                
+                print table[['TeamId', 'pointsTotal']]
+            
+            else:
+                print("Game not played yet")
+    
+        
+    
     return table, teamNames
 
+#%%
 
-table, tableNames = getTable([2015])
-        
-        
+table, tableNames = getTable([2016])
+
+print table
+print tableNames
